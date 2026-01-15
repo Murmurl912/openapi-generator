@@ -115,4 +115,70 @@ public class DartDioClientCodegenTest {
         TestUtils.ensureContainsFile(files, output, "README.md");
         TestUtils.ensureContainsFile(files, output, "lib/src/api.dart");
     }
+
+    @Test
+    public void verifyDartDioGeneratorRunsWithFreezed() throws IOException {
+        File output = Files.createTempDirectory("test").toFile();
+        output.deleteOnExit();
+
+        final CodegenConfigurator configurator = new CodegenConfigurator()
+                .setGeneratorName("dart-dio")
+                .setGitUserId("my-user")
+                .setGitRepoId("my-repo")
+                .setPackageName("my-package")
+                .setInputSpec("src/test/resources/3_0/petstore.yaml")
+                .setOutputDir(output.getAbsolutePath().replace("\\", "/"))
+                .addAdditionalProperty(CodegenConstants.SERIALIZATION_LIBRARY, DartDioClientCodegen.SERIALIZATION_LIBRARY_FREEZED);
+
+        ClientOptInput opts = configurator.toClientOptInput();
+
+        Generator generator = new DefaultGenerator().opts(opts);
+        List<File> files = generator.generate();
+        files.forEach(File::deleteOnExit);
+
+        TestUtils.ensureContainsFile(files, output, "README.md");
+        TestUtils.ensureContainsFile(files, output, "lib/src/api.dart");
+        TestUtils.ensureContainsFile(files, output, "lib/src/model/pet.dart");
+        TestUtils.ensureContainsFile(files, output, "build.yaml");
+
+        String petModel = Files.readString(new File(output, "lib/src/model/pet.dart").toPath());
+        Assert.assertTrue(petModel.contains("@freezed"));
+        Assert.assertTrue(petModel.contains("part 'pet.freezed.dart';"));
+        Assert.assertTrue(petModel.contains("part 'pet.g.dart';"));
+
+        String pubspec = Files.readString(new File(output, "pubspec.yaml").toPath());
+        Assert.assertTrue(pubspec.contains("freezed_annotation"));
+        Assert.assertFalse(pubspec.contains("copy_with_extension"));
+        Assert.assertFalse(pubspec.contains("equatable"));
+    }
+
+    @Test
+    public void verifyDartDioGeneratorRunsWithResultDart() throws IOException {
+        File output = Files.createTempDirectory("test").toFile();
+        output.deleteOnExit();
+
+        final CodegenConfigurator configurator = new CodegenConfigurator()
+                .setGeneratorName("dart-dio")
+                .setGitUserId("my-user")
+                .setGitRepoId("my-repo")
+                .setPackageName("my-package")
+                .setInputSpec("src/test/resources/3_0/petstore.yaml")
+                .setOutputDir(output.getAbsolutePath().replace("\\", "/"))
+                .addAdditionalProperty(DartDioClientCodegen.USE_RESULT_DART, true);
+
+        ClientOptInput opts = configurator.toClientOptInput();
+
+        Generator generator = new DefaultGenerator().opts(opts);
+        List<File> files = generator.generate();
+        files.forEach(File::deleteOnExit);
+
+        TestUtils.ensureContainsFile(files, output, "lib/src/api/pet_api.dart");
+
+        String petApi = Files.readString(new File(output, "lib/src/api/pet_api.dart").toPath());
+        Assert.assertTrue(petApi.contains("Result<Response<"));
+        Assert.assertTrue(petApi.contains("package:result_dart/result_dart.dart"));
+
+        String pubspec = Files.readString(new File(output, "pubspec.yaml").toPath());
+        Assert.assertTrue(pubspec.contains("result_dart"));
+    }
 }

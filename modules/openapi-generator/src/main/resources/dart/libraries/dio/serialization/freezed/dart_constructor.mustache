@@ -1,0 +1,40 @@
+  /// Returns a new [{{{classname}}}] instance.
+  const factory {{{classname}}}({
+  {{#vars}}
+
+    {{#description}}
+    /// {{{description}}}
+    {{/description}}
+    {{^isEnum}}
+      {{#minimum}}
+      // minimum: {{{minimum}}}
+      {{/minimum}}
+      {{#maximum}}
+      // maximum: {{{maximum}}}
+      {{/maximum}}
+    {{/isEnum}}
+    {{#deprecated}}
+    @Deprecated('{{{name}}} has been deprecated')
+    {{/deprecated}}
+    {{^isBinary}}
+    @JsonKey(
+      {{#defaultValue}}defaultValue: {{{defaultValue}}},{{/defaultValue}}
+      name: r'{{{baseName}}}',
+      required: {{#required}}true{{/required}}{{^required}}false{{/required}},
+      includeIfNull: {{#required}}{{#isNullable}}true{{/isNullable}}{{^isNullable}}false{{/isNullable}}{{/required}}{{^required}}false{{/required}},
+    {{#isEnumOrRef}}
+    {{#enumUnknownDefaultCase}}
+      unknownEnumValue: {{{datatypeWithEnum}}}.unknownDefaultOpenApi,
+    {{/enumUnknownDefaultCase}}
+    {{/isEnumOrRef}}
+    )
+    {{/isBinary}}
+    {{#isBinary}}
+    @JsonKey(ignore: true)
+    {{/isBinary}}
+    {{#defaultValue}}
+    @Default({{{defaultValue}}})
+    {{/defaultValue}}
+    {{#required}}{{^defaultValue}}required {{/defaultValue}}{{/required}}{{{datatypeWithEnum}}}{{#required}}{{#isNullable}}?{{/isNullable}}{{/required}}{{^required}}?{{/required}} {{{name}}},
+  {{/vars}}
+  }) = _{{{classname}}};

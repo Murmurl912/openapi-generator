@@ -1,0 +1,39 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part '{{classFilename}}.freezed.dart';
+part '{{classFilename}}.g.dart';
+
+{{!
+    Classes with polymorphism or composition may generate unused imports,
+    these need to be ignored for said classes so that there are no lint errors.
+}}
+{{#parentModel}}
+// ignore_for_file: unused_import
+
+{{/parentModel}}
+
+{{#isDeprecated}}
+@Deprecated('{{{classname}}} has been deprecated')
+{{/isDeprecated}}
+@freezed
+class {{{classname}}} with _${{{classname}}} {
+{{>serialization/freezed/dart_constructor}}
+
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
+}
+{{#vars}}
+    {{#isEnum}}
+        {{^isContainer}}
+
+{{>serialization/freezed/enum_inline}}
+
+        {{/isContainer}}
+        {{#isContainer}}
+            {{#mostInnerItems}}
+
+{{>serialization/freezed/enum_inline}}
+
+            {{/mostInnerItems}}
+        {{/isContainer}}
+    {{/isEnum}}
+{{/vars}}

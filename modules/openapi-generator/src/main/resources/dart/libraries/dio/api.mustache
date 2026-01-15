@@ -1,5 +1,8 @@
 {{>header}}
 import 'dart:async';
+{{#useResultDart}}
+import 'package:result_dart/result_dart.dart';
+{{/useResultDart}}
 
 {{#includeLibraryTemplate}}api/imports{{/includeLibraryTemplate}}
 import 'package:dio/dio.dart';
@@ -29,8 +32,8 @@ class {{classname}} {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future]{{#returnType}} containing a [Response] with a [{{{.}}}] as data{{/returnType}}
-  /// Throws [DioException] if API call or serialization fails
+  /// Returns a [Future]{{#useResultDart}} containing a [Result] with a [Response]{{/useResultDart}}{{^useResultDart}} containing a [Response]{{/useResultDart}}{{#returnType}} with a [{{{.}}}] as data{{/returnType}}
+  /// {{#useResultDart}}Returns [Failure] if API call or serialization fails{{/useResultDart}}{{^useResultDart}}Throws [DioException] if API call or serialization fails{{/useResultDart}}
   {{#externalDocs}}
   /// {{description}}
   /// Also see [{{summary}} Documentation]({{url}})
@@ -38,7 +41,7 @@ class {{classname}} {
   {{#isDeprecated}}
   @Deprecated('This operation has been deprecated')
   {{/isDeprecated}}
-  Future<Response<{{{returnType}}}{{^returnType}}void{{/returnType}}>> {{nickname}}({ {{#allParams}}{{#isPathParam}}
+  {{#useResultDart}}Future<Result<Response<{{{returnType}}}{{^returnType}}void{{/returnType}}>>> {{nickname}}({ {{/useResultDart}}{{^useResultDart}}Future<Response<{{{returnType}}}{{^returnType}}void{{/returnType}}>> {{nickname}}({ {{/useResultDart}}{{#allParams}}{{#isPathParam}}
     {{#isDeprecated}}@Deprecated('{{paramName}} is deprecated') {{/isDeprecated}}required {{{dataType}}} {{paramName}},{{/isPathParam}}{{#isQueryParam}}
     {{#isDeprecated}}@Deprecated('{{paramName}} is deprecated') {{/isDeprecated}}{{#required}}{{^isNullable}}{{^defaultValue}}required {{/defaultValue}}{{/isNullable}}{{/required}}{{{dataType}}}{{#required}}{{#isNullable}}?{{/isNullable}}{{/required}}{{^required}}?{{/required}} {{paramName}}{{^isContainer}}{{#defaultValue}} = {{{.}}}{{/defaultValue}}{{/isContainer}},{{/isQueryParam}}{{#isHeaderParam}}
     {{#isDeprecated}}@Deprecated('{{paramName}} is deprecated') {{/isDeprecated}}{{#required}}{{^isNullable}}{{^defaultValue}}required {{/defaultValue}}{{/isNullable}}{{/required}}{{{dataType}}}{{#required}}{{#isNullable}}?{{/isNullable}}{{/required}}{{^required}}?{{/required}} {{paramName}}{{^isContainer}}{{#defaultValue}} = {{{.}}}{{/defaultValue}}{{/isContainer}},{{/isHeaderParam}}{{#isBodyParam}}
@@ -93,6 +96,21 @@ class {{classname}} {
     try {
 {{#includeLibraryTemplate}}api/serialize{{/includeLibraryTemplate}}
     } catch(error, stackTrace) {
+      {{#useResultDart}}
+      return Failure(
+        DioException(
+          requestOptions: _options.compose(
+            _dio.options,
+            _path,{{#hasQueryParams}}
+            queryParameters: _queryParameters,{{/hasQueryParams}}
+          ),
+          type: DioExceptionType.unknown,
+          error: error,
+          stackTrace: stackTrace,
+        ),
+      );
+      {{/useResultDart}}
+      {{^useResultDart}}
       throw DioException(
          requestOptions: _options.compose(
           _dio.options,
@@ -103,8 +121,29 @@ class {{classname}} {
         error: error,
         stackTrace: stackTrace,
       );
+      {{/useResultDart}}
     }{{/hasBodyOrFormParams}}
 
+    {{#useResultDart}}
+    Response<Object> _response;
+    try {
+      _response = await _dio.request<Object>(
+        _path,{{#hasBodyOrFormParams}}
+        data: _bodyData,{{/hasBodyOrFormParams}}
+        options: _options,{{#hasQueryParams}}
+        queryParameters: _queryParameters,{{/hasQueryParams}}
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
+      );
+    } catch (error) {
+      if (error is Exception) {
+        return Failure(error);
+      }
+      return Failure(Exception(error.toString()));
+    }
+    {{/useResultDart}}
+    {{^useResultDart}}
     final _response = await _dio.request<Object>(
       _path,{{#hasBodyOrFormParams}}
       data: _bodyData,{{/hasBodyOrFormParams}}
@@ -114,6 +153,7 @@ class {{classname}} {
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
+    {{/useResultDart}}
     {{#returnType}}
 
     {{{.}}}? _responseData;
@@ -121,6 +161,18 @@ class {{classname}} {
     try {
 {{#includeLibraryTemplate}}api/deserialize{{/includeLibraryTemplate}}
     } catch (error, stackTrace) {
+      {{#useResultDart}}
+      return Failure(
+        DioException(
+          requestOptions: _response.requestOptions,
+          response: _response,
+          type: DioExceptionType.unknown,
+          error: error,
+          stackTrace: stackTrace,
+        ),
+      );
+      {{/useResultDart}}
+      {{^useResultDart}}
       throw DioException(
         requestOptions: _response.requestOptions,
         response: _response,
@@ -128,9 +180,10 @@ class {{classname}} {
         error: error,
         stackTrace: stackTrace,
       );
+      {{/useResultDart}}
     }
 
-    return Response<{{{returnType}}}>(
+    final _result = Response<{{{returnType}}}>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -139,8 +192,28 @@ class {{classname}} {
       statusCode: _response.statusCode,
       statusMessage: _response.statusMessage,
       extra: _response.extra,
-    );{{/returnType}}{{^returnType}}
-    return _response;{{/returnType}}
+    );
+    {{#useResultDart}}
+    return Success(_result);
+    {{/useResultDart}}
+    {{^useResultDart}}
+    return _result;
+    {{/useResultDart}}{{/returnType}}{{^returnType}}
+    {{#useResultDart}}
+    return Success(Response<void>(
+      data: null,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    ));
+    {{/useResultDart}}
+    {{^useResultDart}}
+    return _response;
+    {{/useResultDart}}{{/returnType}}
   }
 
   {{/operation}}

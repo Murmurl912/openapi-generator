@@ -65,13 +65,16 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
     public static final String EQUALITY_CHECK_METHOD_EQUATABLE = "equatable";
     public static final String SERIALIZATION_LIBRARY_BUILT_VALUE = "built_value";
     public static final String SERIALIZATION_LIBRARY_JSON_SERIALIZABLE = "json_serializable";
+    public static final String SERIALIZATION_LIBRARY_FREEZED = "freezed";
     public static final String SERIALIZATION_LIBRARY_DEFAULT = SERIALIZATION_LIBRARY_BUILT_VALUE;
 
     private static final String DIO_IMPORT = "package:dio/dio.dart";
     public static final String FINAL_PROPERTIES = "finalProperties";
     public static final String SKIP_COPY_WITH = "skipCopyWith";
+    public static final String USE_RESULT_DART = "useResultDart";
     public static final String FINAL_PROPERTIES_DEFAULT_VALUE = "true";
     public static final String SKIP_COPY_WITH_DEFAULT_VALUE = "false";
+    public static final String USE_RESULT_DART_DEFAULT_VALUE = "false";
 
     private static final String CLIENT_NAME = "clientName";
 
@@ -111,6 +114,7 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
 
         supportedLibraries.put(SERIALIZATION_LIBRARY_BUILT_VALUE, "[DEFAULT] built_value");
         supportedLibraries.put(SERIALIZATION_LIBRARY_JSON_SERIALIZABLE, "[BETA] json_serializable");
+        supportedLibraries.put(SERIALIZATION_LIBRARY_FREEZED, "[BETA] freezed");
         final CliOption serializationLibrary = CliOption.newString(CodegenConstants.SERIALIZATION_LIBRARY, "Specify serialization library");
         serializationLibrary.setEnum(supportedLibraries);
         serializationLibrary.setDefault(SERIALIZATION_LIBRARY_DEFAULT);
@@ -145,6 +149,11 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         final CliOption skipCopyWith = CliOption.newBoolean(SKIP_COPY_WITH, "Skip CopyWith when using Json Serializable for serialization");
         skipCopyWith.setDefault("false");
         cliOptions.add(skipCopyWith);
+
+        // result_dart option
+        final CliOption useResultDart = CliOption.newBoolean(USE_RESULT_DART, "Return Result<Response<T>> from api methods using result_dart");
+        useResultDart.setDefault(USE_RESULT_DART_DEFAULT_VALUE);
+        cliOptions.add(useResultDart);
     }
 
     @Override
@@ -196,6 +205,13 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
             additionalProperties.put(SKIP_COPY_WITH, Boolean.parseBoolean(additionalProperties.get(SKIP_COPY_WITH).toString()));
         }
 
+        if (!additionalProperties.containsKey(USE_RESULT_DART)) {
+            additionalProperties.put(USE_RESULT_DART, Boolean.parseBoolean(USE_RESULT_DART_DEFAULT_VALUE));
+            LOGGER.debug("useResultDart not set, using default {}", USE_RESULT_DART_DEFAULT_VALUE);
+        } else {
+            additionalProperties.put(USE_RESULT_DART, Boolean.parseBoolean(additionalProperties.get(USE_RESULT_DART).toString()));
+        }
+
         if (!additionalProperties.containsKey(CLIENT_NAME)) {
             final String name = org.openapitools.codegen.utils.StringUtils.camelize(pubName);
             additionalProperties.put(CLIENT_NAME, name);
@@ -230,6 +246,10 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
             case SERIALIZATION_LIBRARY_JSON_SERIALIZABLE:
                 additionalProperties.put("useJsonSerializable", "true");
                 configureSerializationLibraryJsonSerializable(srcFolder);
+                break;
+            case SERIALIZATION_LIBRARY_FREEZED:
+                additionalProperties.put("useFreezed", "true");
+                configureSerializationLibraryFreezed(srcFolder);
                 break;
             default:
             case SERIALIZATION_LIBRARY_BUILT_VALUE:
@@ -295,7 +315,22 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         imports.put("MultipartFile", DIO_IMPORT);
     }
 
+    private void configureSerializationLibraryFreezed(String srcFolder) {
+        supportingFiles.add(new SupportingFile("serialization/freezed/build.yaml.mustache", "" /* main project dir */, "build.yaml"));
+        supportingFiles.add(new SupportingFile("serialization/freezed/deserialize.mustache", srcFolder,
+                "deserialize.dart"));
+
+        // most of these are defined in AbstractDartCodegen, we are overriding
+        // just the binary / file handling
+        languageSpecificPrimitives.add("Object");
+        imports.put("Uint8List", "dart:typed_data");
+        imports.put("MultipartFile", DIO_IMPORT);
+    }
+
     private void configureEqualityCheckMethod(String srcFolder) {
+        if (!SERIALIZATION_LIBRARY_JSON_SERIALIZABLE.equals(library)) {
+            return;
+        }
         switch (equalityCheckMethod) {
             case EQUALITY_CHECK_METHOD_EQUATABLE:
                 additionalProperties.put("useEquatable", "true");
@@ -684,7 +719,7 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
                 op.imports.remove("Uint8List");
             }
 
-            if (SERIALIZATION_LIBRARY_JSON_SERIALIZABLE.equals(library)) {
+            if (SERIALIZATION_LIBRARY_JSON_SERIALIZABLE.equals(library) || SERIALIZATION_LIBRARY_FREEZED.equals(library)) {
                 // built_value serialization uses Uint8List for all MultipartFile types
                 // in json_serialization, MultipartFile is used as the file parameter type, but
                 // MultipartFile isn't readable, instead we convert this to a Uin8List
