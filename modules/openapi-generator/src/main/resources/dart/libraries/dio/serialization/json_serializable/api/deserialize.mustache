@@ -3,5 +3,11 @@ final rawData = _response.data;
 _responseData = rawData == null ? null : rawData as {{{returnType}}};
 {{/isResponseFile}}
 {{^isResponseFile}}
+{{#returnProperty}}
+final value = rawData;
+_responseData = value == null ? null : {{>serialization/json_serializable/deserialize_value}};
+{{/returnProperty}}
+{{^returnProperty}}
 _responseData = rawData == null ? null : deserialize<{{{returnType}}}, {{{returnBaseType}}}>(rawData, '{{{returnType}}}', growable: true);
+{{/returnProperty}}
 {{/isResponseFile}}

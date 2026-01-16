@@ -23,4 +23,26 @@ enum {{{classname}}} {
 
   @override
   String toString() => value;
+
+  static const Map<String, {{{classname}}}> _valueMap = {
+{{#allowableValues}}
+{{#enumVars}}
+    {{^isNull}}
+    {{^isString}}'{{/isString}}{{#isString}}r{{/isString}}{{{value}}}{{^isString}}'{{/isString}}: {{{name}}}{{^-last}},{{/-last}}
+    {{/isNull}}
+{{/enumVars}}
+{{/allowableValues}}
+  };
+
+  static {{{classname}}} fromJson(Object? value) {
+    final valueString = '$value';
+    final mapped = _valueMap[valueString];
+    if (mapped != null) {
+      return mapped;
+    }
+{{#enumUnknownDefaultCase}}
+    return {{{classname}}}.unknownDefaultOpenApi;
+{{/enumUnknownDefaultCase}}
+    throw Exception('Unknown enum value: $value');
+  }
 }

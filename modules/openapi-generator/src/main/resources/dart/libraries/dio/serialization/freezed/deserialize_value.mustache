@@ -1,0 +1,25 @@
+{{#isContainer}}
+{{#isMap}}
+(value as Map<String, dynamic>).map((key, value) => MapEntry(
+  key,
+  {{#items}}{{>serialization/freezed/deserialize_value}}{{/items}},
+))
+{{/isMap}}
+{{^isMap}}
+{{#uniqueItems}}
+(value as List).map((dynamic value) => {{#items}}{{>serialization/freezed/deserialize_value}}{{/items}}).toSet()
+{{/uniqueItems}}
+{{^uniqueItems}}
+(value as List).map((dynamic value) => {{#items}}{{>serialization/freezed/deserialize_value}}{{/items}}).toList(growable: true)
+{{/uniqueItems}}
+{{/isMap}}
+{{/isContainer}}
+{{^isContainer}}
+{{#isEnumOrRef}}
+{{{datatypeWithEnum}}}.fromJson(value)
+{{/isEnumOrRef}}
+{{^isEnumOrRef}}
+{{#isModel}}{{{datatypeWithEnum}}}.fromJson(value as Map<String, dynamic>){{/isModel}}
+{{^isModel}}deserialize<{{{datatypeWithEnum}}}, {{{baseType}}}>(value, '{{{datatypeWithEnum}}}'){{/isModel}}
+{{/isEnumOrRef}}
+{{/isContainer}}

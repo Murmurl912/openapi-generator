@@ -1,11 +1,3 @@
-{{#models}}
-  {{#model}}
-  {{^isEnum}}
-import 'package:{{pubName}}/{{sourceFolder}}/{{modelPackage}}/{{classFilename}}.dart';
-{{/isEnum}}
-{{/model}}
-{{/models}}
-
 final _regList = RegExp(r'^List<(.*)>$');
 final _regSet = RegExp(r'^Set<(.*)>$');
 final _regMap = RegExp(r'^Map<String,(.*)>$');
@@ -24,18 +16,6 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return (valueString == 'true' || valueString == '1') as ReturnType;
         case 'double':
           return (value is double ? value : double.parse('$value')) as ReturnType;
-        {{#models}}
-          {{#model}}
-        case '{{{classname}}}':
-            {{#isEnum}}
-          {{#native_serialization}}return {{{classname}}}TypeTransformer().decode(value);{{/native_serialization}}
-          {{#json_serializable}} return _$enumDecode(_${{{classname}}}EnumMap, value);{{/json_serializable}}
-            {{/isEnum}}
-            {{^isEnum}}
-          return {{{classname}}}.fromJson(value as Map<String, dynamic>) as ReturnType;
-            {{/isEnum}}
-          {{/model}}
-        {{/models}}
         default:
           RegExpMatch? match;
 

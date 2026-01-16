@@ -181,4 +181,150 @@ public class DartDioClientCodegenTest {
         String pubspec = Files.readString(new File(output, "pubspec.yaml").toPath());
         Assert.assertTrue(pubspec.contains("result_dart"));
     }
+
+    @Test
+    public void verifyDartDioGeneratorRunsWithFreezedDiscriminatorUnion() throws IOException {
+        File output = Files.createTempDirectory("test").toFile();
+        output.deleteOnExit();
+
+        final CodegenConfigurator configurator = new CodegenConfigurator()
+                .setGeneratorName("dart-dio")
+                .setGitUserId("my-user")
+                .setGitRepoId("my-repo")
+                .setPackageName("my-package")
+                .setInputSpec("src/test/resources/3_0/oneof_polymorphism_and_inheritance.yaml")
+                .setOutputDir(output.getAbsolutePath().replace("\\", "/"))
+                .addAdditionalProperty(CodegenConstants.SERIALIZATION_LIBRARY, DartDioClientCodegen.SERIALIZATION_LIBRARY_FREEZED);
+
+        ClientOptInput opts = configurator.toClientOptInput();
+
+        Generator generator = new DefaultGenerator().opts(opts);
+        List<File> files = generator.generate();
+        files.forEach(File::deleteOnExit);
+
+        TestUtils.ensureContainsFile(files, output, "lib/src/model/foo_ref_or_value.dart");
+
+        String model = Files.readString(new File(output, "lib/src/model/foo_ref_or_value.dart").toPath());
+        Assert.assertTrue(model.contains("@Freezed(unionKey: r'@type')"));
+        Assert.assertTrue(model.contains("@FreezedUnionValue(r'Foo')"));
+        Assert.assertTrue(model.contains("const factory FooRefOrValue.foo"));
+        Assert.assertTrue(model.contains("part 'foo_ref_or_value.g.dart';"));
+    }
+
+    @Test
+    public void verifyDartDioGeneratorInlineDeserializeForContainerAndEnum() throws IOException {
+        String api = generateInlineDeserializeApi(false);
+
+        Assert.assertTrue(api.contains("map((dynamic value)"));
+        Assert.assertTrue(api.contains("Pet.fromJson("));
+        Assert.assertTrue(api.contains("MapEntry"));
+        Assert.assertTrue(api.contains("Status.fromJson"));
+    }
+
+    @Test
+    public void verifyDartDioGeneratorInlineDeserializeForContainerAndEnumWithFreezed() throws IOException {
+        String api = generateInlineDeserializeApi(true);
+
+        Assert.assertTrue(api.contains("map((dynamic value)"));
+        Assert.assertTrue(api.contains("Pet.fromJson("));
+        Assert.assertTrue(api.contains("MapEntry"));
+        Assert.assertTrue(api.contains("Status.fromJson"));
+    }
+
+    private String generateInlineDeserializeApi(boolean useFreezed) throws IOException {
+        File output = Files.createTempDirectory("test").toFile();
+        output.deleteOnExit();
+
+        File specFile = File.createTempFile("dart-dio-inline", ".yaml");
+        specFile.deleteOnExit();
+        String spec = String.join("\n",
+                "openapi: 3.0.3",
+                "info:",
+                "  title: Dart Dio Inline Deserialize",
+                "  version: 1.0.0",
+                "paths:",
+                "  /pets:",
+                "    get:",
+                "      tags:",
+                "        - Inline",
+                "      operationId: getPets",
+                "      responses:",
+                "        '200':",
+                "          description: ok",
+                "          content:",
+                "            application/json:",
+                "              schema:",
+                "                type: array",
+                "                items:",
+                "                  $ref: '#/components/schemas/Pet'",
+                "  /statuses:",
+                "    get:",
+                "      tags:",
+                "        - Inline",
+                "      operationId: getStatuses",
+                "      responses:",
+                "        '200':",
+                "          description: ok",
+                "          content:",
+                "            application/json:",
+                "              schema:",
+                "                type: array",
+                "                items:",
+                "                  $ref: '#/components/schemas/Status'",
+                "  /status-map:",
+                "    get:",
+                "      tags:",
+                "        - Inline",
+                "      operationId: getStatusMap",
+                "      responses:",
+                "        '200':",
+                "          description: ok",
+                "          content:",
+                "            application/json:",
+                "              schema:",
+                "                type: object",
+                "                additionalProperties:",
+                "                  $ref: '#/components/schemas/Status'",
+                "components:",
+                "  schemas:",
+                "    Pet:",
+                "      type: object",
+                "      properties:",
+                "        id:",
+                "          type: integer",
+                "          format: int64",
+                "        name:",
+                "          type: string",
+                "    Status:",
+                "      type: string",
+                "      enum:",
+                "        - available",
+                "        - pending",
+                "        - sold",
+                ""
+        );
+        Files.write(specFile.toPath(), spec.getBytes(StandardCharsets.UTF_8));
+
+        CodegenConfigurator configurator = new CodegenConfigurator()
+                .setGeneratorName("dart-dio")
+                .setGitUserId("my-user")
+                .setGitRepoId("my-repo")
+                .setPackageName("my-package")
+                .setInputSpec(specFile.getAbsolutePath().replace("\\", "/"))
+                .setOutputDir(output.getAbsolutePath().replace("\\", "/"));
+
+        if (useFreezed) {
+            configurator.addAdditionalProperty(CodegenConstants.SERIALIZATION_LIBRARY, DartDioClientCodegen.SERIALIZATION_LIBRARY_FREEZED);
+        }
+
+        ClientOptInput opts = configurator.toClientOptInput();
+
+        Generator generator = new DefaultGenerator().opts(opts);
+        List<File> files = generator.generate();
+        files.forEach(File::deleteOnExit);
+
+        TestUtils.ensureContainsFile(files, output, "lib/src/api/inline_api.dart");
+
+        return Files.readString(new File(output, "lib/src/api/inline_api.dart").toPath());
+    }
 }

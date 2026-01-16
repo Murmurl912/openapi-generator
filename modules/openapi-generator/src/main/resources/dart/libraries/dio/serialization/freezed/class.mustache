@@ -15,12 +15,70 @@ part '{{classFilename}}.g.dart';
 {{#isDeprecated}}
 @Deprecated('{{{classname}}} has been deprecated')
 {{/isDeprecated}}
+{{#oneOf}}{{#-first}}
+{{#discriminator}}
+@Freezed(unionKey: r'{{propertyBaseName}}')
+class {{{classname}}} with _${{{classname}}} {
+  {{#mappedModels}}
+  @FreezedUnionValue(r'{{mappingName}}')
+  const factory {{{classname}}}.{{#lambda.camelcase}}{{modelName}}{{/lambda.camelcase}}({required {{modelName}} value}) = {{{classname}}}{{modelName}};
+  {{/mappedModels}}
+  {{^mappedModels}}
+  {{#oneOf}}
+  @FreezedUnionValue(r'{{{.}}}')
+  const factory {{{classname}}}.{{#lambda.camelcase}}{{.}}{{/lambda.camelcase}}({required {{{.}}} value}) = {{{classname}}}{{{.}}};
+  {{/oneOf}}
+  {{/mappedModels}}
+
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
+}
+{{/discriminator}}
+{{^discriminator}}
 @freezed
 class {{{classname}}} with _${{{classname}}} {
 {{>serialization/freezed/dart_constructor}}
 
   factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
 }
+{{/discriminator}}
+{{/-first}}{{/oneOf}}
+{{^oneOf}}
+{{#anyOf}}{{#-first}}
+{{#discriminator}}
+@Freezed(unionKey: r'{{propertyBaseName}}')
+class {{{classname}}} with _${{{classname}}} {
+  {{#mappedModels}}
+  @FreezedUnionValue(r'{{mappingName}}')
+  const factory {{{classname}}}.{{#lambda.camelcase}}{{modelName}}{{/lambda.camelcase}}({required {{modelName}} value}) = {{{classname}}}{{modelName}};
+  {{/mappedModels}}
+  {{^mappedModels}}
+  {{#anyOf}}
+  @FreezedUnionValue(r'{{{.}}}')
+  const factory {{{classname}}}.{{#lambda.camelcase}}{{.}}{{/lambda.camelcase}}({required {{{.}}} value}) = {{{classname}}}{{{.}}};
+  {{/anyOf}}
+  {{/mappedModels}}
+
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
+}
+{{/discriminator}}
+{{^discriminator}}
+@freezed
+class {{{classname}}} with _${{{classname}}} {
+{{>serialization/freezed/dart_constructor}}
+
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
+}
+{{/discriminator}}
+{{/-first}}{{/anyOf}}
+{{^anyOf}}
+@freezed
+class {{{classname}}} with _${{{classname}}} {
+{{>serialization/freezed/dart_constructor}}
+
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
+}
+{{/anyOf}}
+{{/oneOf}}
 {{#vars}}
     {{#isEnum}}
         {{^isContainer}}

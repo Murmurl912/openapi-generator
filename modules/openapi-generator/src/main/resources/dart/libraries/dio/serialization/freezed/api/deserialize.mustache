@@ -1,7 +1,12 @@
-final rawData = _response.data;
+final value = _response.data;
 {{#isResponseFile}}
-_responseData = rawData == null ? null : rawData as {{{returnType}}};
+_responseData = value == null ? null : value as {{{returnType}}};
 {{/isResponseFile}}
 {{^isResponseFile}}
-_responseData = rawData == null ? null : deserialize<{{{returnType}}}, {{{returnBaseType}}}>(rawData, '{{{returnType}}}', growable: true);
+{{#returnProperty}}
+_responseData = value == null ? null : {{>serialization/freezed/deserialize_value}};
+{{/returnProperty}}
+{{^returnProperty}}
+_responseData = value == null ? null : deserialize<{{{returnType}}}, {{{returnBaseType}}}>(value, '{{{returnType}}}', growable: true);
+{{/returnProperty}}
 {{/isResponseFile}}
