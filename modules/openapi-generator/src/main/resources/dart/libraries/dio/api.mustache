@@ -32,7 +32,13 @@ class {{classname}} {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future]{{#useResultDart}} containing a [Result] with a [Response]{{/useResultDart}}{{^useResultDart}} containing a [Response]{{/useResultDart}}{{#returnType}} with a [{{{.}}}] as data{{/returnType}}
+  /// Returns a [Future]
+  {{#useResultDart}}
+  /// containing a [Result] with {{#vendorExtensions.x-dart-result-wrap-response}}a [Response]{{/vendorExtensions.x-dart-result-wrap-response}}{{^vendorExtensions.x-dart-result-wrap-response}}{{#returnType}}a [{{{.}}}]{{/returnType}}{{/vendorExtensions.x-dart-result-wrap-response}}{{#returnType}}{{#vendorExtensions.x-dart-result-wrap-response}} with a [{{{.}}}] as data{{/vendorExtensions.x-dart-result-wrap-response}}{{/returnType}}
+  {{/useResultDart}}
+  {{^useResultDart}}
+  /// containing a [Response]{{#returnType}} with a [{{{.}}}] as data{{/returnType}}
+  {{/useResultDart}}
   /// {{#useResultDart}}Returns [Failure] if API call or serialization fails{{/useResultDart}}{{^useResultDart}}Throws [DioException] if API call or serialization fails{{/useResultDart}}
   {{#externalDocs}}
   /// {{description}}
@@ -41,7 +47,7 @@ class {{classname}} {
   {{#isDeprecated}}
   @Deprecated('This operation has been deprecated')
   {{/isDeprecated}}
-  {{#useResultDart}}Future<Result<Response<{{{returnType}}}{{^returnType}}void{{/returnType}}>>> {{nickname}}({ {{/useResultDart}}{{^useResultDart}}Future<Response<{{{returnType}}}{{^returnType}}void{{/returnType}}>> {{nickname}}({ {{/useResultDart}}{{#allParams}}{{#isPathParam}}
+  {{#useResultDart}}{{#vendorExtensions.x-dart-result-wrap-response}}Future<Result<Response<{{{returnType}}}{{^returnType}}void{{/returnType}}>>> {{nickname}}({ {{/vendorExtensions.x-dart-result-wrap-response}}{{^vendorExtensions.x-dart-result-wrap-response}}Future<Result<{{{returnType}}}{{^returnType}}void{{/returnType}}>> {{nickname}}({ {{/vendorExtensions.x-dart-result-wrap-response}}{{/useResultDart}}{{^useResultDart}}Future<Response<{{{returnType}}}{{^returnType}}void{{/returnType}}>> {{nickname}}({ {{/useResultDart}}{{#allParams}}{{#isPathParam}}
     {{#isDeprecated}}@Deprecated('{{paramName}} is deprecated') {{/isDeprecated}}required {{{dataType}}} {{paramName}},{{/isPathParam}}{{#isQueryParam}}
     {{#isDeprecated}}@Deprecated('{{paramName}} is deprecated') {{/isDeprecated}}{{#required}}{{^isNullable}}{{^defaultValue}}required {{/defaultValue}}{{/isNullable}}{{/required}}{{{dataType}}}{{#required}}{{#isNullable}}?{{/isNullable}}{{/required}}{{^required}}?{{/required}} {{paramName}}{{^isContainer}}{{#defaultValue}} = {{{.}}}{{/defaultValue}}{{/isContainer}},{{/isQueryParam}}{{#isHeaderParam}}
     {{#isDeprecated}}@Deprecated('{{paramName}} is deprecated') {{/isDeprecated}}{{#required}}{{^isNullable}}{{^defaultValue}}required {{/defaultValue}}{{/isNullable}}{{/required}}{{{dataType}}}{{#required}}{{#isNullable}}?{{/isNullable}}{{/required}}{{^required}}?{{/required}} {{paramName}}{{^isContainer}}{{#defaultValue}} = {{{.}}}{{/defaultValue}}{{/isContainer}},{{/isHeaderParam}}{{#isBodyParam}}
@@ -183,6 +189,8 @@ class {{classname}} {
       {{/useResultDart}}
     }
 
+    {{#useResultDart}}
+    {{#vendorExtensions.x-dart-result-wrap-response}}
     final _result = Response<{{{returnType}}}>(
       data: _responseData,
       headers: _response.headers,
@@ -193,10 +201,33 @@ class {{classname}} {
       statusMessage: _response.statusMessage,
       extra: _response.extra,
     );
-    {{#useResultDart}}
     return Success(_result);
+    {{/vendorExtensions.x-dart-result-wrap-response}}
+    {{^vendorExtensions.x-dart-result-wrap-response}}
+    if (_responseData == null) {
+      return Failure(
+        DioException(
+          requestOptions: _response.requestOptions,
+          response: _response,
+          type: DioExceptionType.unknown,
+          error: 'Response body is null',
+        ),
+      );
+    }
+    return Success(_responseData);
+    {{/vendorExtensions.x-dart-result-wrap-response}}
     {{/useResultDart}}
     {{^useResultDart}}
+    final _result = Response<{{{returnType}}}>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
     return _result;
     {{/useResultDart}}{{/returnType}}{{^returnType}}
     {{#useResultDart}}

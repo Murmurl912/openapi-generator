@@ -28,8 +28,9 @@ part '{{classFilename}}.g.dart';
   createToJson: true,
   disallowUnrecognizedKeys: false,
   explicitToJson: true,
+  {{#vendorExtensions.x-dart-generic-response-base}}genericArgumentFactories: true,{{/vendorExtensions.x-dart-generic-response-base}}
 )
-class {{{classname}}} {
+class {{{classname}}}{{#vendorExtensions.x-dart-generic-response-base}}<T>{{/vendorExtensions.x-dart-generic-response-base}} {
 {{>serialization/json_serializable/dart_constructor}}
 
 
@@ -67,16 +68,21 @@ class {{{classname}}} {
 
 
   {{#required}}
-  {{#finalProperties}}final {{/finalProperties}}{{{datatypeWithEnum}}}{{#isNullable}}?{{/isNullable}} {{{name}}};
+  {{#finalProperties}}final {{/finalProperties}}{{#vendorExtensions.x-dart-generic-type}}T{{/vendorExtensions.x-dart-generic-type}}{{^vendorExtensions.x-dart-generic-type}}{{{datatypeWithEnum}}}{{/vendorExtensions.x-dart-generic-type}}{{#vendorExtensions.x-dart-generic-type-nullable}}?{{/vendorExtensions.x-dart-generic-type-nullable}}{{^vendorExtensions.x-dart-generic-type}}{{#isNullable}}?{{/isNullable}}{{/vendorExtensions.x-dart-generic-type}} {{{name}}};
   {{/required}}
   {{^required}}
-  {{#finalProperties}}final {{/finalProperties}}{{{datatypeWithEnum}}}? {{{name}}};
+  {{#finalProperties}}final {{/finalProperties}}{{#vendorExtensions.x-dart-generic-type}}T{{/vendorExtensions.x-dart-generic-type}}{{^vendorExtensions.x-dart-generic-type}}{{{datatypeWithEnum}}}{{/vendorExtensions.x-dart-generic-type}}{{#vendorExtensions.x-dart-generic-type-nullable}}?{{/vendorExtensions.x-dart-generic-type-nullable}}{{^vendorExtensions.x-dart-generic-type}}?{{/vendorExtensions.x-dart-generic-type}} {{{name}}};
   {{/required}}
 
 
 
 {{/vars}}
 
+  {{#vendorExtensions.x-dart-generic-response-base}}
+  @JsonKey(ignore: true)
+  Response<dynamic>? raw;
+
+  {{/vendorExtensions.x-dart-generic-response-base}}
   {{#useEquatable}}
     bool operator ==(Object other) {
       return identical(this, other) ||
@@ -121,9 +127,19 @@ class {{{classname}}} {
     {{/vars}}
   {{/useEquatable}}
 
+  {{#vendorExtensions.x-dart-generic-response-base}}
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json, T Function(Object?) fromJsonT) => _${{{classname}}}FromJson(json, fromJsonT);
+  {{/vendorExtensions.x-dart-generic-response-base}}
+  {{^vendorExtensions.x-dart-generic-response-base}}
   factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
+  {{/vendorExtensions.x-dart-generic-response-base}}
 
+  {{#vendorExtensions.x-dart-generic-response-base}}
+  Map<String, dynamic> toJson(Object? Function(T value) toJsonT) => _${{{classname}}}ToJson(this, toJsonT);
+  {{/vendorExtensions.x-dart-generic-response-base}}
+  {{^vendorExtensions.x-dart-generic-response-base}}
   Map<String, dynamic> toJson() => _${{{classname}}}ToJson(this);
+  {{/vendorExtensions.x-dart-generic-response-base}}
 
   @override
   String toString() {

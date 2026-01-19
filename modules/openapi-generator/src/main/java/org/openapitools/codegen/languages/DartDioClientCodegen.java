@@ -67,14 +67,20 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
     public static final String SERIALIZATION_LIBRARY_JSON_SERIALIZABLE = "json_serializable";
     public static final String SERIALIZATION_LIBRARY_FREEZED = "freezed";
     public static final String SERIALIZATION_LIBRARY_DEFAULT = SERIALIZATION_LIBRARY_BUILT_VALUE;
+    public static final String GENERIC_RESPONSE_BASE_MODELS = "genericResponseBaseModels";
+    public static final String GENERIC_RESPONSE_DATA_FIELD = "genericResponseDataField";
 
     private static final String DIO_IMPORT = "package:dio/dio.dart";
     public static final String FINAL_PROPERTIES = "finalProperties";
     public static final String SKIP_COPY_WITH = "skipCopyWith";
     public static final String USE_RESULT_DART = "useResultDart";
+    public static final String RESULT_DART_WRAP_RESPONSE = "resultDartWrapResponse";
+    public static final String SKIP_GENERIC_RESPONSE_MODELS = "skipGenericResponseModels";
     public static final String FINAL_PROPERTIES_DEFAULT_VALUE = "true";
     public static final String SKIP_COPY_WITH_DEFAULT_VALUE = "false";
     public static final String USE_RESULT_DART_DEFAULT_VALUE = "false";
+    public static final String RESULT_DART_WRAP_RESPONSE_DEFAULT_VALUE = "true";
+    public static final String SKIP_GENERIC_RESPONSE_MODELS_DEFAULT_VALUE = "true";
 
     private static final String CLIENT_NAME = "clientName";
 
@@ -87,6 +93,12 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
     private String clientName;
 
     private TemplateManager templateManager;
+    private Set<String> genericResponseBaseModels = new HashSet<>();
+    private List<String> genericResponseDataFields = new ArrayList<>(Collections.singletonList("data"));
+    private boolean useResultDart = false;
+    private boolean resultDartWrapResponse = true;
+    private boolean skipGenericResponseModels = true;
+    private final Map<String, CodegenModel> allModelsByClassname = new HashMap<>();
 
     public DartDioClientCodegen() {
         super();
@@ -154,6 +166,25 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         final CliOption useResultDart = CliOption.newBoolean(USE_RESULT_DART, "Return Result<Response<T>> from api methods using result_dart");
         useResultDart.setDefault(USE_RESULT_DART_DEFAULT_VALUE);
         cliOptions.add(useResultDart);
+
+        final CliOption resultDartWrapResponse = CliOption.newBoolean(RESULT_DART_WRAP_RESPONSE,
+                "Wrap Result with Dio Response for api methods when using result_dart");
+        resultDartWrapResponse.setDefault(RESULT_DART_WRAP_RESPONSE_DEFAULT_VALUE);
+        cliOptions.add(resultDartWrapResponse);
+
+        final CliOption skipGenericResponseModels = CliOption.newBoolean(SKIP_GENERIC_RESPONSE_MODELS,
+                "Skip generating concrete response wrapper models when using genericResponseBaseModels");
+        skipGenericResponseModels.setDefault(SKIP_GENERIC_RESPONSE_MODELS_DEFAULT_VALUE);
+        cliOptions.add(skipGenericResponseModels);
+
+        final CliOption genericResponseBases = CliOption.newString(GENERIC_RESPONSE_BASE_MODELS,
+                "Comma-separated list of base schema names to treat as generic response wrappers");
+        cliOptions.add(genericResponseBases);
+
+        final CliOption genericResponseDataField = CliOption.newString(GENERIC_RESPONSE_DATA_FIELD,
+                "Comma-separated list of data field names for generic response wrappers");
+        genericResponseDataField.setDefault("data");
+        cliOptions.add(genericResponseDataField);
     }
 
     @Override
@@ -211,6 +242,23 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         } else {
             additionalProperties.put(USE_RESULT_DART, Boolean.parseBoolean(additionalProperties.get(USE_RESULT_DART).toString()));
         }
+        useResultDart = Boolean.parseBoolean(additionalProperties.get(USE_RESULT_DART).toString());
+
+        if (!additionalProperties.containsKey(RESULT_DART_WRAP_RESPONSE)) {
+            additionalProperties.put(RESULT_DART_WRAP_RESPONSE, Boolean.parseBoolean(RESULT_DART_WRAP_RESPONSE_DEFAULT_VALUE));
+            LOGGER.debug("resultDartWrapResponse not set, using default {}", RESULT_DART_WRAP_RESPONSE_DEFAULT_VALUE);
+        } else {
+            additionalProperties.put(RESULT_DART_WRAP_RESPONSE, Boolean.parseBoolean(additionalProperties.get(RESULT_DART_WRAP_RESPONSE).toString()));
+        }
+        resultDartWrapResponse = Boolean.parseBoolean(additionalProperties.get(RESULT_DART_WRAP_RESPONSE).toString());
+
+        if (!additionalProperties.containsKey(SKIP_GENERIC_RESPONSE_MODELS)) {
+            additionalProperties.put(SKIP_GENERIC_RESPONSE_MODELS, Boolean.parseBoolean(SKIP_GENERIC_RESPONSE_MODELS_DEFAULT_VALUE));
+            LOGGER.debug("skipGenericResponseModels not set, using default {}", SKIP_GENERIC_RESPONSE_MODELS_DEFAULT_VALUE);
+        } else {
+            additionalProperties.put(SKIP_GENERIC_RESPONSE_MODELS, Boolean.parseBoolean(additionalProperties.get(SKIP_GENERIC_RESPONSE_MODELS).toString()));
+        }
+        skipGenericResponseModels = Boolean.parseBoolean(additionalProperties.get(SKIP_GENERIC_RESPONSE_MODELS).toString());
 
         if (!additionalProperties.containsKey(CLIENT_NAME)) {
             final String name = org.openapitools.codegen.utils.StringUtils.camelize(pubName);
@@ -218,6 +266,8 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
             LOGGER.debug("Client name not set, using default {}", DATE_LIBRARY_DEFAULT);
         }
         setClientName(additionalProperties.get(CLIENT_NAME).toString());
+        configureGenericResponseBases();
+        configureGenericResponseDataFields();
 
         supportingFiles.add(new SupportingFile("pubspec.mustache", "", "pubspec.yaml"));
         supportingFiles.add(new SupportingFile("analysis_options.mustache", "", "analysis_options.yaml"));
@@ -239,6 +289,85 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         configureSerializationLibrary(srcFolder);
         configureEqualityCheckMethod(srcFolder);
         configureDateLibrary(srcFolder);
+    }
+
+    private void configureGenericResponseBases() {
+        Object value = additionalProperties.get(GENERIC_RESPONSE_BASE_MODELS);
+        if (value == null) {
+            return;
+        }
+
+        Set<String> names = new HashSet<>();
+        if (value instanceof String) {
+            for (String part : ((String) value).split(",")) {
+                String trimmed = part.trim();
+                if (!trimmed.isEmpty()) {
+                    names.add(toModelName(trimmed));
+                }
+            }
+        } else if (value instanceof Collection) {
+            for (Object part : ((Collection<?>) value)) {
+                if (part == null) {
+                    continue;
+                }
+                String trimmed = part.toString().trim();
+                if (!trimmed.isEmpty()) {
+                    names.add(toModelName(trimmed));
+                }
+            }
+        } else {
+            String trimmed = value.toString().trim();
+            if (!trimmed.isEmpty()) {
+                names.add(toModelName(trimmed));
+            }
+        }
+
+        if (!names.isEmpty() && SERIALIZATION_LIBRARY_BUILT_VALUE.equals(library)) {
+            LOGGER.warn("{} is currently supported only for json_serializable or freezed", GENERIC_RESPONSE_BASE_MODELS);
+        }
+
+        genericResponseBaseModels = names;
+        additionalProperties.put(GENERIC_RESPONSE_BASE_MODELS, new ArrayList<>(names));
+    }
+
+    private void configureGenericResponseDataFields() {
+        Object value = additionalProperties.get(GENERIC_RESPONSE_DATA_FIELD);
+        List<String> names = parseCommaSeparatedList(value, "data");
+        genericResponseDataFields = names;
+        additionalProperties.put(GENERIC_RESPONSE_DATA_FIELD, new ArrayList<>(names));
+    }
+
+    private List<String> parseCommaSeparatedList(Object value, String defaultValue) {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        if (value == null) {
+            names.add(defaultValue);
+        } else if (value instanceof String) {
+            for (String part : ((String) value).split(",")) {
+                String trimmed = part.trim();
+                if (!trimmed.isEmpty()) {
+                    names.add(trimmed);
+                }
+            }
+        } else if (value instanceof Collection) {
+            for (Object part : ((Collection<?>) value)) {
+                if (part == null) {
+                    continue;
+                }
+                String trimmed = part.toString().trim();
+                if (!trimmed.isEmpty()) {
+                    names.add(trimmed);
+                }
+            }
+        } else {
+            String trimmed = value.toString().trim();
+            if (!trimmed.isEmpty()) {
+                names.add(trimmed);
+            }
+        }
+        if (names.isEmpty()) {
+            names.add(defaultValue);
+        }
+        return new ArrayList<>(names);
     }
 
     private void configureSerializationLibrary(String srcFolder) {
@@ -313,6 +442,7 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         languageSpecificPrimitives.add("Object");
         imports.put("Uint8List", "dart:typed_data");
         imports.put("MultipartFile", DIO_IMPORT);
+        imports.put("Response", DIO_IMPORT);
     }
 
     private void configureSerializationLibraryFreezed(String srcFolder) {
@@ -325,6 +455,7 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         languageSpecificPrimitives.add("Object");
         imports.put("Uint8List", "dart:typed_data");
         imports.put("MultipartFile", DIO_IMPORT);
+        imports.put("Response", DIO_IMPORT);
     }
 
     private void configureEqualityCheckMethod(String srcFolder) {
@@ -646,6 +777,34 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         for (ModelsMap entry : objs.values()) {
             for (ModelMap mo : entry.getModels()) {
                 CodegenModel cm = mo.getModel();
+                if (cm != null) {
+                    allModelsByClassname.put(cm.getClassname(), cm);
+                }
+                String genericBase = findGenericResponseBase(cm);
+                if (!SERIALIZATION_LIBRARY_BUILT_VALUE.equals(library)
+                        && !genericResponseBaseModels.isEmpty()
+                        && genericResponseBaseModels.contains(cm.getClassname())) {
+                    cm.vendorExtensions.put("x-dart-generic-response-base", true);
+                    CodegenProperty dataProp = findDataProperty(cm);
+                    if (dataProp != null) {
+                        dataProp.vendorExtensions.put("x-dart-generic-type", true);
+                        dataProp.vendorExtensions.put("x-dart-generic-type-nullable", true);
+                    } else {
+                        LOGGER.warn("Generic response base {} does not declare any of data fields {}", cm.getClassname(), genericResponseDataFields);
+                    }
+                    cm.imports.add("Response");
+                }
+                if (!SERIALIZATION_LIBRARY_BUILT_VALUE.equals(library)
+                        && skipGenericResponseModels
+                        && genericBase != null) {
+                    CodegenProperty dataProp = findDataProperty(cm);
+                    if (dataProp != null) {
+                        if (!schemaMapping().containsKey(cm.getName())) {
+                            schemaMapping().put(cm.getName(), cm.getName());
+                        }
+                        cm.vendorExtensions.put("x-dart-skip-model", true);
+                    }
+                }
                 cm.imports = rewriteImports(cm.imports, true);
                 cm.vendorExtensions.put("x-has-vars", !cm.vars.isEmpty());
             }
@@ -687,8 +846,16 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         List<CodegenOperation> operationList = operations.getOperation();
 
         Set<String> resultImports = new HashSet<>();
+        Map<String, CodegenModel> modelsByClassname = new HashMap<>();
+        modelsByClassname.putAll(allModelsByClassname);
+        for (ModelMap modelMap : allModels) {
+            CodegenModel model = modelMap.getModel();
+            modelsByClassname.put(model.getClassname(), model);
+        }
 
         for (CodegenOperation op : operationList) {
+            boolean wrapResultWithResponse = true;
+
             for (CodegenParameter param : op.allParams) {
                 if (((op.isMultipart && param.isFormParam) || param.isBodyParam) && (param.isBinary || param.isFile)) {
                     param.dataType = param.dataType.replace("Uint8List", "MultipartFile");
@@ -730,6 +897,45 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
                 }
             }
 
+            String originalReturnBaseType = op.returnBaseType;
+            if (!SERIALIZATION_LIBRARY_BUILT_VALUE.equals(library)
+                    && !genericResponseBaseModels.isEmpty()
+                    && op.returnBaseType != null) {
+                CodegenModel responseModel = modelsByClassname.get(op.returnBaseType);
+                if (responseModel != null) {
+                    String matchedBase = findGenericResponseBase(responseModel);
+                    if (matchedBase != null) {
+                        CodegenProperty dataProp = findDataProperty(responseModel);
+                        if (dataProp != null) {
+                            boolean dataNullable = true;
+                            String dataType = dataProp.datatypeWithEnum;
+                            if (dataType != null && !dataType.endsWith("?")) {
+                                dataType += "?";
+                            }
+                            dataProp.vendorExtensions.put("x-dart-generic-response-data-nullable", dataNullable);
+                            op.vendorExtensions.put("x-dart-generic-response", true);
+                            op.vendorExtensions.put("x-dart-generic-response-base", matchedBase);
+                            op.vendorExtensions.put("x-dart-generic-response-data-type", dataType);
+                            op.vendorExtensions.put("x-dart-generic-response-data", dataProp);
+                            op.returnType = matchedBase + "<" + dataType + ">";
+                            op.returnBaseType = matchedBase;
+                            op.imports.add(matchedBase);
+                            addImportForProperty(op, dataProp);
+                            if (useResultDart && !resultDartWrapResponse) {
+                                wrapResultWithResponse = false;
+                            }
+                            if (originalReturnBaseType != null) {
+                                op.imports.remove(originalReturnBaseType);
+                            }
+                        } else {
+                            LOGGER.warn("Generic response model {} does not declare any of data fields {}", responseModel.getClassname(), genericResponseDataFields);
+                        }
+                    }
+                }
+            }
+
+            op.vendorExtensions.put("x-dart-result-wrap-response", wrapResultWithResponse);
+
             resultImports.addAll(rewriteImports(op.imports, false));
 
             if (SERIALIZATION_LIBRARY_BUILT_VALUE.equals(library)) {
@@ -767,6 +973,80 @@ public class DartDioClientCodegen extends AbstractDartCodegen {
         objs.put("imports", resultImports.stream().sorted().collect(Collectors.toList()));
 
         return objs;
+    }
+
+    private CodegenProperty findDataProperty(CodegenModel model) {
+        if (model == null) {
+            return null;
+        }
+        for (String fieldName : genericResponseDataFields) {
+            CodegenProperty dataProp = findModelPropertyByName(model, fieldName);
+            if (dataProp != null) {
+                return dataProp;
+            }
+        }
+        return null;
+    }
+
+    private CodegenProperty findModelPropertyByName(CodegenModel model, String fieldName) {
+        CodegenProperty dataProp = model.vars.stream()
+                .filter(prop -> fieldName.equals(prop.baseName))
+                .findFirst()
+                .orElse(null);
+        if (dataProp != null) {
+            return dataProp;
+        }
+        if (model.allVars != null) {
+            return model.allVars.stream()
+                    .filter(prop -> fieldName.equals(prop.baseName))
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
+    }
+
+    private String findGenericResponseBase(CodegenModel model) {
+        if (model == null || genericResponseBaseModels.isEmpty()) {
+            return null;
+        }
+        Set<String> candidates = new HashSet<>();
+        if (model.getAllParents() != null) {
+            candidates.addAll(model.getAllParents());
+        }
+        if (model.allOf != null) {
+            candidates.addAll(model.allOf);
+        }
+        if (model.getParent() != null) {
+            candidates.add(model.getParent());
+        }
+        if (model.getParentSchema() != null) {
+            candidates.add(model.getParentSchema());
+        }
+        for (String baseName : genericResponseBaseModels) {
+            if (candidates.contains(baseName)) {
+                return baseName;
+            }
+        }
+        return null;
+    }
+
+    private void addImportForProperty(CodegenOperation op, CodegenProperty property) {
+        if (property == null) {
+            return;
+        }
+        if (property.isModel || property.isEnum) {
+            if (property.baseType != null && !property.baseType.isEmpty()) {
+                op.imports.add(property.baseType);
+            } else if (property.datatypeWithEnum != null && !property.datatypeWithEnum.isEmpty()) {
+                op.imports.add(property.datatypeWithEnum);
+            }
+        }
+        if (property.items != null) {
+            addImportForProperty(op, property.items);
+        }
+        if (property.additionalProperties != null) {
+            addImportForProperty(op, property.additionalProperties);
+        }
     }
 
     private void addBuiltValueSerializerImport(String type) {

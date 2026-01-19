@@ -3,10 +3,19 @@ final value = _response.data;
 _responseData = value == null ? null : value as {{{returnType}}};
 {{/isResponseFile}}
 {{^isResponseFile}}
+{{#vendorExtensions.x-dart-generic-response}}
+_responseData = value == null ? null : {{vendorExtensions.x-dart-generic-response-base}}<{{{vendorExtensions.x-dart-generic-response-data-type}}}>.fromJson(
+  value as Map<String, dynamic>,
+  (data) => {{#vendorExtensions.x-dart-generic-response-data}}{{#vendorExtensions.x-dart-generic-response-data-nullable}}data == null ? null : {{/vendorExtensions.x-dart-generic-response-data-nullable}}((dynamic value) => {{>serialization/freezed/deserialize_value}})(data){{/vendorExtensions.x-dart-generic-response-data}},
+);
+_responseData = _responseData?.copyWith(raw: _response);
+{{/vendorExtensions.x-dart-generic-response}}
+{{^vendorExtensions.x-dart-generic-response}}
 {{#returnProperty}}
 _responseData = value == null ? null : {{>serialization/freezed/deserialize_value}};
 {{/returnProperty}}
 {{^returnProperty}}
 _responseData = value == null ? null : deserialize<{{{returnType}}}, {{{returnBaseType}}}>(value, '{{{returnType}}}', growable: true);
 {{/returnProperty}}
+{{/vendorExtensions.x-dart-generic-response}}
 {{/isResponseFile}}

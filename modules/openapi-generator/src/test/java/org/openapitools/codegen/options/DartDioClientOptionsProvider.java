@@ -40,6 +40,11 @@ public class DartDioClientOptionsProvider implements OptionsProvider {
     public static final String PUB_REPOSITORY_VALUE = "Repository";
     public static final String PUB_PUBLISH_TO_VALUE = "Publish to";
     public static final String ENUM_UNKNOWN_DEFAULT_CASE_VALUE = "false";
+    public static final String USE_RESULT_DART_VALUE = "false";
+    public static final String GENERIC_RESPONSE_BASE_MODELS_VALUE = "ApiResponseBase";
+    public static final String GENERIC_RESPONSE_DATA_FIELD_VALUE = "data";
+    public static final String RESULT_DART_WRAP_RESPONSE_VALUE = "true";
+    public static final String SKIP_GENERIC_RESPONSE_MODELS_VALUE = "true";
 
     @Override
     public String getLanguage() {
@@ -73,6 +78,11 @@ public class DartDioClientOptionsProvider implements OptionsProvider {
                 .put(CodegenConstants.DISALLOW_ADDITIONAL_PROPERTIES_IF_NOT_PRESENT, "true")
                 .put(CodegenConstants.ENUM_UNKNOWN_DEFAULT_CASE, ENUM_UNKNOWN_DEFAULT_CASE_VALUE)
                 .put(DartDioClientCodegen.SKIP_COPY_WITH, DartDioClientCodegen.SKIP_COPY_WITH_DEFAULT_VALUE)
+                .put(DartDioClientCodegen.USE_RESULT_DART, USE_RESULT_DART_VALUE)
+                .put(DartDioClientCodegen.RESULT_DART_WRAP_RESPONSE, RESULT_DART_WRAP_RESPONSE_VALUE)
+                .put(DartDioClientCodegen.SKIP_GENERIC_RESPONSE_MODELS, SKIP_GENERIC_RESPONSE_MODELS_VALUE)
+                .put(DartDioClientCodegen.GENERIC_RESPONSE_BASE_MODELS, GENERIC_RESPONSE_BASE_MODELS_VALUE)
+                .put(DartDioClientCodegen.GENERIC_RESPONSE_DATA_FIELD, GENERIC_RESPONSE_DATA_FIELD_VALUE)
                 .build();
     }
 

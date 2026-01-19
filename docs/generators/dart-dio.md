@@ -25,6 +25,8 @@ These options may be applied as additional-properties (cli) or configOptions (pl
 |enumUnknownDefaultCase|If the server adds new enum cases, that are unknown by an old spec/client, the client will fail to parse the network response.With this option enabled, each enum will have a new case, 'unknown_default_open_api', so that when the server sends an enum case that is not known by the client/spec, they can safely fallback to this case.|<dl><dt>**false**</dt><dd>No changes to the enum's are made, this is the default option.</dd><dt>**true**</dt><dd>With this option enabled, each enum will have a new case, 'unknown_default_open_api', so that when the enum case sent by the server is not known by the client/spec, can safely be decoded to this case.</dd></dl>|false|
 |equalityCheckMethod|Specify equality check method. Takes effect only in case if serializationLibrary is json_serializable.|<dl><dt>**default**</dt><dd>[DEFAULT] Built in hash code generation method</dd><dt>**equatable**</dt><dd>Uses equatable library for equality checking</dd></dl>|default|
 |finalProperties|Whether properties are marked as final when using Json Serializable for serialization| |true|
+|genericResponseBaseModels|Comma-separated list of base schema names to treat as generic response wrappers (json_serializable/freezed only)| | |
+|genericResponseDataField|Comma-separated list of data field names for generic response wrappers (json_serializable/freezed only)| |data|
 |legacyDiscriminatorBehavior|Set to false for generators with better support for discriminators. (Python, Java, Go, PowerShell, C# have this enabled by default).|<dl><dt>**true**</dt><dd>The mapping in the discriminator includes descendent schemas that allOf inherit from self and the discriminator mapping schemas in the OAS document.</dd><dt>**false**</dt><dd>The mapping in the discriminator includes any descendent schemas that allOf inherit from self, any oneOf schemas, any anyOf schemas, any x-discriminator-values, and the discriminator mapping schemas in the OAS document AND Codegen validates that oneOf and anyOf schemas contain the required discriminator and throws an error if the discriminator is missing.</dd></dl>|true|
 |prependFormOrBodyParameters|Add form or body parameters to the beginning of the parameter list.| |false|
 |pubAuthor|Author name in generated pubspec| |Author|
@@ -39,10 +41,39 @@ These options may be applied as additional-properties (cli) or configOptions (pl
 |serializationLibrary|Specify serialization library|<dl><dt>**built_value**</dt><dd>[DEFAULT] built_value</dd><dt>**json_serializable**</dt><dd>[BETA] json_serializable</dd><dt>**freezed**</dt><dd>[BETA] freezed</dd></dl>|built_value|
 |skipCopyWith|Skip CopyWith when using Json Serializable for serialization| |false|
 |useResultDart|Return Result&lt;Response&lt;T&gt;&gt; from API methods using result_dart| |false|
+|resultDartWrapResponse|Wrap Result with Dio Response for API methods when using result_dart| |true|
+|skipGenericResponseModels|Skip generating concrete response wrapper models when using genericResponseBaseModels| |true|
 |sortModelPropertiesByRequiredFlag|Sort model properties to place required parameters before optional parameters.| |true|
 |sortParamsByRequiredFlag|Sort method arguments to place required parameters before optional parameters.| |true|
 |sourceFolder|source folder for generated code| |src|
 |useEnumExtension|Allow the 'x-enum-values' extension for enums| |false|
+
+## EXAMPLE CONFIG FILE
+
+You can put `additionalProperties` in a config file to keep the generate command readable.
+
+```yaml
+generatorName: dart-dio
+additionalProperties:
+  serializationLibrary: freezed
+  useResultDart: true
+  pubName: skinai_client
+  pubLibrary: skinai.client
+  pubVersion: 0.0.1
+  ignoreUnknownKeys: true
+  genericResponseBaseModels: ApiResponse
+  genericResponseDataField: data
+  resultDartWrapResponse: false
+```
+
+Command:
+
+```
+java -jar scripts/openapi-generator-cli.jar generate \
+  -i schema/openapi.renamed.yaml \
+  -c config/dart-dio.yaml \
+  -o ./
+```
 
 ## IMPORT MAPPING
 

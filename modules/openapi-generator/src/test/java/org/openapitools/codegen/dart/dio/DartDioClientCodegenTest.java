@@ -231,6 +231,202 @@ public class DartDioClientCodegenTest {
         Assert.assertTrue(api.contains("Status.fromJson"));
     }
 
+    @Test
+    public void verifyDartDioGeneratorGenericResponseBaseModels() throws IOException {
+        File output = Files.createTempDirectory("test").toFile();
+        output.deleteOnExit();
+
+        File specFile = writeGenericResponseSpec();
+
+        final CodegenConfigurator configurator = new CodegenConfigurator()
+                .setGeneratorName("dart-dio")
+                .setGitUserId("my-user")
+                .setGitRepoId("my-repo")
+                .setPackageName("my-package")
+                .setInputSpec(specFile.getAbsolutePath().replace("\\", "/"))
+                .setOutputDir(output.getAbsolutePath().replace("\\", "/"))
+                .addAdditionalProperty(CodegenConstants.SERIALIZATION_LIBRARY, DartDioClientCodegen.SERIALIZATION_LIBRARY_JSON_SERIALIZABLE)
+                .addAdditionalProperty(DartDioClientCodegen.GENERIC_RESPONSE_BASE_MODELS, "ApiResponseBase");
+
+        ClientOptInput opts = configurator.toClientOptInput();
+        Generator generator = new DefaultGenerator().opts(opts);
+        List<File> files = generator.generate();
+        files.forEach(File::deleteOnExit);
+
+        TestUtils.ensureContainsFile(files, output, "lib/src/api/user_api.dart");
+        TestUtils.ensureContainsFile(files, output, "lib/src/model/api_response_base.dart");
+        TestUtils.ensureDoesNotContainFile(files, output, "lib/src/model/user_response.dart");
+        TestUtils.ensureDoesNotContainFile(files, output, "lib/src/model/user_response.dart");
+
+        String api = Files.readString(new File(output, "lib/src/api/user_api.dart").toPath());
+        Assert.assertTrue(api.contains("Response<ApiResponseBase<User"));
+        Assert.assertTrue(api.contains("ApiResponseBase<User"));
+        Assert.assertTrue(api.contains("User.fromJson"));
+
+        String baseModel = Files.readString(new File(output, "lib/src/model/api_response_base.dart").toPath());
+        Assert.assertTrue(baseModel.contains("class ApiResponseBase<T>"));
+        Assert.assertTrue(baseModel.contains("factory ApiResponseBase.fromJson(Map<String, dynamic> json, T Function(Object?) fromJsonT)"));
+    }
+
+    @Test
+    public void verifyDartDioGeneratorGenericResponseBaseModelsWithFreezed() throws IOException {
+        File output = Files.createTempDirectory("test").toFile();
+        output.deleteOnExit();
+
+        File specFile = writeGenericResponseSpec();
+
+        final CodegenConfigurator configurator = new CodegenConfigurator()
+                .setGeneratorName("dart-dio")
+                .setGitUserId("my-user")
+                .setGitRepoId("my-repo")
+                .setPackageName("my-package")
+                .setInputSpec(specFile.getAbsolutePath().replace("\\", "/"))
+                .setOutputDir(output.getAbsolutePath().replace("\\", "/"))
+                .addAdditionalProperty(CodegenConstants.SERIALIZATION_LIBRARY, DartDioClientCodegen.SERIALIZATION_LIBRARY_FREEZED)
+                .addAdditionalProperty(DartDioClientCodegen.GENERIC_RESPONSE_BASE_MODELS, "ApiResponseBase");
+
+        ClientOptInput opts = configurator.toClientOptInput();
+        Generator generator = new DefaultGenerator().opts(opts);
+        List<File> files = generator.generate();
+        files.forEach(File::deleteOnExit);
+
+        TestUtils.ensureContainsFile(files, output, "lib/src/api/user_api.dart");
+        TestUtils.ensureContainsFile(files, output, "lib/src/model/api_response_base.dart");
+        TestUtils.ensureDoesNotContainFile(files, output, "lib/src/model/user_response.dart");
+
+        String api = Files.readString(new File(output, "lib/src/api/user_api.dart").toPath());
+        Assert.assertTrue(api.contains("Response<ApiResponseBase<User"));
+        Assert.assertTrue(api.contains("ApiResponseBase<User"));
+        Assert.assertTrue(api.contains("User.fromJson"));
+
+        String baseModel = Files.readString(new File(output, "lib/src/model/api_response_base.dart").toPath());
+        Assert.assertTrue(baseModel.contains("@Freezed(genericArgumentFactories: true)"));
+        Assert.assertTrue(baseModel.contains("class ApiResponseBase<T>"));
+        Assert.assertTrue(baseModel.contains("factory ApiResponseBase.fromJson(Map<String, dynamic> json, T Function(Object?) fromJsonT)"));
+    }
+
+    @Test
+    public void verifyDartDioGeneratorGenericResponseBaseModelsWithResultDartUnwrapped() throws IOException {
+        File output = Files.createTempDirectory("test").toFile();
+        output.deleteOnExit();
+
+        File specFile = writeGenericResponseSpec();
+
+        final CodegenConfigurator configurator = new CodegenConfigurator()
+                .setGeneratorName("dart-dio")
+                .setGitUserId("my-user")
+                .setGitRepoId("my-repo")
+                .setPackageName("my-package")
+                .setInputSpec(specFile.getAbsolutePath().replace("\\", "/"))
+                .setOutputDir(output.getAbsolutePath().replace("\\", "/"))
+                .addAdditionalProperty(CodegenConstants.SERIALIZATION_LIBRARY, DartDioClientCodegen.SERIALIZATION_LIBRARY_JSON_SERIALIZABLE)
+                .addAdditionalProperty(DartDioClientCodegen.USE_RESULT_DART, "true")
+                .addAdditionalProperty(DartDioClientCodegen.RESULT_DART_WRAP_RESPONSE, "false")
+                .addAdditionalProperty(DartDioClientCodegen.GENERIC_RESPONSE_BASE_MODELS, "ApiResponseBase");
+
+        ClientOptInput opts = configurator.toClientOptInput();
+        Generator generator = new DefaultGenerator().opts(opts);
+        List<File> files = generator.generate();
+        files.forEach(File::deleteOnExit);
+
+        TestUtils.ensureContainsFile(files, output, "lib/src/api/user_api.dart");
+
+        String api = Files.readString(new File(output, "lib/src/api/user_api.dart").toPath());
+        Assert.assertTrue(api.contains("Future<Result<ApiResponseBase<User?>"));
+        Assert.assertTrue(api.contains("return Success(_responseData);"));
+        Assert.assertFalse(api.contains("Result<Response<ApiResponseBase"));
+    }
+
+    @Test
+    public void verifyDartDioGeneratorGenericResponseBaseModelsWithCustomDataField() throws IOException {
+        File output = Files.createTempDirectory("test").toFile();
+        output.deleteOnExit();
+
+        File specFile = writeGenericResponseSpec("result");
+
+        final CodegenConfigurator configurator = new CodegenConfigurator()
+                .setGeneratorName("dart-dio")
+                .setGitUserId("my-user")
+                .setGitRepoId("my-repo")
+                .setPackageName("my-package")
+                .setInputSpec(specFile.getAbsolutePath().replace("\\", "/"))
+                .setOutputDir(output.getAbsolutePath().replace("\\", "/"))
+                .addAdditionalProperty(CodegenConstants.SERIALIZATION_LIBRARY, DartDioClientCodegen.SERIALIZATION_LIBRARY_JSON_SERIALIZABLE)
+                .addAdditionalProperty(DartDioClientCodegen.GENERIC_RESPONSE_BASE_MODELS, "ApiResponseBase")
+                .addAdditionalProperty(DartDioClientCodegen.GENERIC_RESPONSE_DATA_FIELD, "result");
+
+        ClientOptInput opts = configurator.toClientOptInput();
+        Generator generator = new DefaultGenerator().opts(opts);
+        List<File> files = generator.generate();
+        files.forEach(File::deleteOnExit);
+
+        TestUtils.ensureContainsFile(files, output, "lib/src/api/user_api.dart");
+        TestUtils.ensureContainsFile(files, output, "lib/src/model/api_response_base.dart");
+
+        String api = Files.readString(new File(output, "lib/src/api/user_api.dart").toPath());
+        Assert.assertTrue(api.contains("Response<ApiResponseBase<User"));
+        Assert.assertTrue(api.contains("ApiResponseBase<User"));
+        Assert.assertTrue(api.contains("User.fromJson"));
+    }
+
+    private File writeGenericResponseSpec() throws IOException {
+        return writeGenericResponseSpec("data");
+    }
+
+    private File writeGenericResponseSpec(String dataFieldName) throws IOException {
+        File specFile = File.createTempFile("dart-dio-generic-response", ".yaml");
+        specFile.deleteOnExit();
+        String spec = String.join("\n",
+                "openapi: 3.0.3",
+                "info:",
+                "  title: Dart Dio Generic Response",
+                "  version: 1.0.0",
+                "paths:",
+                "  /user:",
+                "    get:",
+                "      tags:",
+                "        - User",
+                "      operationId: getUser",
+                "      responses:",
+                "        '200':",
+                "          description: ok",
+                "          content:",
+                "            application/json:",
+                "              schema:",
+                "                $ref: '#/components/schemas/UserResponse'",
+                "components:",
+                "  schemas:",
+                "    ApiResponseBase:",
+                "      type: object",
+                "      properties:",
+                "        code:",
+                "          type: integer",
+                "        msg:",
+                "          type: string",
+                "        traceId:",
+                "          type: string",
+                "        " + dataFieldName + ":",
+                "          type: object",
+                "    User:",
+                "      type: object",
+                "      properties:",
+                "        id:",
+                "          type: integer",
+                "        name:",
+                "          type: string",
+                "    UserResponse:",
+                "      allOf:",
+                "        - $ref: '#/components/schemas/ApiResponseBase'",
+                "        - type: object",
+                "          properties:",
+                "            " + dataFieldName + ":",
+                "              $ref: '#/components/schemas/User'",
+                ""
+        );
+        Files.write(specFile.toPath(), spec.getBytes(StandardCharsets.UTF_8));
+        return specFile;
+    }
+
     private String generateInlineDeserializeApi(boolean useFreezed) throws IOException {
         File output = Files.createTempDirectory("test").toFile();
         output.deleteOnExit();
@@ -315,6 +511,8 @@ public class DartDioClientCodegenTest {
 
         if (useFreezed) {
             configurator.addAdditionalProperty(CodegenConstants.SERIALIZATION_LIBRARY, DartDioClientCodegen.SERIALIZATION_LIBRARY_FREEZED);
+        } else {
+            configurator.addAdditionalProperty(CodegenConstants.SERIALIZATION_LIBRARY, DartDioClientCodegen.SERIALIZATION_LIBRARY_JSON_SERIALIZABLE);
         }
 
         ClientOptInput opts = configurator.toClientOptInput();

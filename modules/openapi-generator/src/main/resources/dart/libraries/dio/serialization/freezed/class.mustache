@@ -34,12 +34,22 @@ class {{{classname}}} with _${{{classname}}} {
 }
 {{/discriminator}}
 {{^discriminator}}
+{{#vendorExtensions.x-dart-generic-response-base}}
+@Freezed(genericArgumentFactories: true)
+class {{{classname}}}<T> with _${{{classname}}}<T> {
+{{>serialization/freezed/dart_constructor}}
+
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json, T Function(Object?) fromJsonT) => _${{{classname}}}FromJson(json, fromJsonT);
+}
+{{/vendorExtensions.x-dart-generic-response-base}}
+{{^vendorExtensions.x-dart-generic-response-base}}
 @freezed
 class {{{classname}}} with _${{{classname}}} {
 {{>serialization/freezed/dart_constructor}}
 
   factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
 }
+{{/vendorExtensions.x-dart-generic-response-base}}
 {{/discriminator}}
 {{/-first}}{{/oneOf}}
 {{^oneOf}}
@@ -62,21 +72,41 @@ class {{{classname}}} with _${{{classname}}} {
 }
 {{/discriminator}}
 {{^discriminator}}
+{{#vendorExtensions.x-dart-generic-response-base}}
+@Freezed(genericArgumentFactories: true)
+class {{{classname}}}<T> with _${{{classname}}}<T> {
+{{>serialization/freezed/dart_constructor}}
+
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json, T Function(Object?) fromJsonT) => _${{{classname}}}FromJson(json, fromJsonT);
+}
+{{/vendorExtensions.x-dart-generic-response-base}}
+{{^vendorExtensions.x-dart-generic-response-base}}
 @freezed
 class {{{classname}}} with _${{{classname}}} {
 {{>serialization/freezed/dart_constructor}}
 
   factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
 }
+{{/vendorExtensions.x-dart-generic-response-base}}
 {{/discriminator}}
 {{/-first}}{{/anyOf}}
 {{^anyOf}}
+{{#vendorExtensions.x-dart-generic-response-base}}
+@Freezed(genericArgumentFactories: true)
+class {{{classname}}}<T> with _${{{classname}}}<T> {
+{{>serialization/freezed/dart_constructor}}
+
+  factory {{{classname}}}.fromJson(Map<String, dynamic> json, T Function(Object?) fromJsonT) => _${{{classname}}}FromJson(json, fromJsonT);
+}
+{{/vendorExtensions.x-dart-generic-response-base}}
+{{^vendorExtensions.x-dart-generic-response-base}}
 @freezed
 class {{{classname}}} with _${{{classname}}} {
 {{>serialization/freezed/dart_constructor}}
 
   factory {{{classname}}}.fromJson(Map<String, dynamic> json) => _${{{classname}}}FromJson(json);
 }
+{{/vendorExtensions.x-dart-generic-response-base}}
 {{/anyOf}}
 {{/oneOf}}
 {{#vars}}

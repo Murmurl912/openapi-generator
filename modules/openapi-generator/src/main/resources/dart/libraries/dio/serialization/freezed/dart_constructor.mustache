@@ -35,6 +35,10 @@
     {{#defaultValue}}
     @Default({{{defaultValue}}})
     {{/defaultValue}}
-    {{#required}}{{^defaultValue}}required {{/defaultValue}}{{/required}}{{{datatypeWithEnum}}}{{#required}}{{#isNullable}}?{{/isNullable}}{{/required}}{{^required}}?{{/required}} {{{name}}},
+    {{#required}}{{^defaultValue}}required {{/defaultValue}}{{/required}}{{#vendorExtensions.x-dart-generic-type}}T{{/vendorExtensions.x-dart-generic-type}}{{^vendorExtensions.x-dart-generic-type}}{{{datatypeWithEnum}}}{{/vendorExtensions.x-dart-generic-type}}{{#vendorExtensions.x-dart-generic-type-nullable}}?{{/vendorExtensions.x-dart-generic-type-nullable}}{{^vendorExtensions.x-dart-generic-type}}{{#required}}{{#isNullable}}?{{/isNullable}}{{/required}}{{^required}}?{{/required}}{{/vendorExtensions.x-dart-generic-type}} {{{name}}},
   {{/vars}}
+  {{#vendorExtensions.x-dart-generic-response-base}}
+    @JsonKey(ignore: true)
+    Response<dynamic>? raw,
+  {{/vendorExtensions.x-dart-generic-response-base}}
   }) = _{{{classname}}};
