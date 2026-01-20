@@ -172,7 +172,7 @@ class FormatTest {
 
 
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
 
 
   final MultipartFile? binary;

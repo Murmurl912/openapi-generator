@@ -63,7 +63,7 @@ class {{{classname}}}{{#vendorExtensions.x-dart-generic-response-base}}<T>{{/ven
   )
   {{/isBinary}}
   {{#isBinary}}
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   {{/isBinary}}
 
 
@@ -79,7 +79,7 @@ class {{{classname}}}{{#vendorExtensions.x-dart-generic-response-base}}<T>{{/ven
 {{/vars}}
 
   {{#vendorExtensions.x-dart-generic-response-base}}
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   Response<dynamic>? raw;
 
   {{/vendorExtensions.x-dart-generic-response-base}}
